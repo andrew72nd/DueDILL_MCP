@@ -1,72 +1,87 @@
-# DueDill Model Context Protocol (MCP) Server
+# <p align="center"><img src="due-diligence-logo.svg" alt="DueDill Logo" width="120" height="120" /><br>🌿 DueDill: Model Context Protocol (MCP) Server</p>
 
-The **DueDill MCP Server** is a self-contained local tool suite that connects LLM agents directly to the **DueDill** investment due diligence framework. 
+A self-contained local Model Context Protocol (MCP) server that connects local LLM agents directly to the **DueDill** systematic company valuation and investment due diligence framework.
 
-By running this server in your agent environment (such as **VS Code GitHub Copilot Chat**, **Cursor**, or **Claude Desktop**), local models (like **Ollama**'s `qwen2.5-coder` or `llama3.1`) can autonomously fetch normalized prompts, parse ratings and key evidence out of analyses, and compile formatted Markdown investment reports optimized for **Affine** import.
+This server enables local agents (running in **VS Code GitHub Copilot Chat**, **Cursor**, or **Claude Desktop**) to autonomously checklist gates, parse scores, extract key evidence, and compile formatted dossiers using the exact same programmatic parsing engines and templates as the manual web application.
 
----
-
-## What It Does
-
-This MCP server replicates the exact logic, regex parsers, and templates used by the DueDill Next.js web application. It exposes four core tools to your AI agent:
-
-1.  **`list_gates`**
-    *   **Description**: Retrieves the checklist of all due diligence gates/pillars, their weight coefficients, and purposes from `manifest.json`.
-2.  **`get_gate_prompt`**
-    *   **Description**: Reads a specific pillar prompt from the file system, prepends the core analysis rules from `00-core-principles.md`, and interpolates `{COMPANY}` and `{DATE}` tokens dynamically.
-3.  **`parse_gate_response`**
-    *   **Description**: Analyzes raw markdown outputs from the model to automatically parse out the numerical **Rating Score** (0-100), the **PASS/FAIL** verdict, a list of **Key Evidence** bullets, the **Final Report Input** summary block, and **References** using strict RegExp patterns.
-4.  **`compile_final_report`**
-    *   **Description**: Aggregates ratings and summaries from the individual gates to compile a comprehensive, polished due diligence Markdown report suitable for investment committees and fully compatible with Affine's markdown parser.
+> [!TIP]
+> **Live Web Application**: You can access the manual interactive web interface at [duedill.britl.uk](https://duedill.britl.uk). The MCP server acts as the local API companion to this client-side experience.
 
 ---
 
-## Prompt Asset Repository
-
-The server includes the local self-contained prompts folder:
-*   `prompts/manifest.json`: Configuration mapping files and weights.
-*   `prompts/00-core-principles.md`: Global guidelines on source quality, formatting, and scepticism.
-*   `prompts/gate-1-fundamental-quality-screen.md`: Checklist for basic balance sheet health.
-*   `prompts/gate-2-rule-of-40.md`: Evaluates growth and FCF efficiency.
-*   `prompts/gate-3-moat-test.md`: Chinese reverse-engineering moat durability stress test.
-*   `prompts/gate-4-ceo-filter.md`: Leadership capital allocation evaluation.
-*   `prompts/gate-5-valuation.md`: Conservative DCF scenario and sensitivity modeling.
-*   `prompts/final-report-compiler.md`: The template instructions used to synthesize summaries into the final executive recommendations.
+### 🥒 The "Due Dill" Botanical Taxonomy
+> *While "DueDill" might sound like a developer's spelling slip-up of **"Due Diligence"**, we prefer to think of it as a **dill flower** reaching peak maturity. Like the dill plant going to seed, this tool helps your investment ideas mature, ripen, and flower—ensuring your portfolio gets seasoned properly instead of turning into a sour pickle!*
 
 ---
 
-## Installation & Setup
+## 🛠️ The Core Workflow Pipeline
 
-1.  Ensure you have **Node.js** (v18+) installed.
-2.  Navigate to the `DueDILL_MCP` folder:
-    ```bash
-    cd DueDILL_MCP
-    ```
-3.  Install dependencies:
-    ```bash
-    npm install
-    ```
+```
+  [list_gates]          [get_gate_prompt]          [parse_gate_response]        [compile_final_report]
+        │                       │                            │                             │
+  Checklist and ──────> Normalized Prompt ─────────> RegExp Parsers ───────────> Markdown Compiler
+  Weights Map           (Dynamic Company)            (Rating & Evidence)          (Optimized for Affine)
+```
 
 ---
 
-## How to Configure in VS Code for Local Agents
+## 📋 Tool Catalog
 
-VS Code (v1.99+) natively supports Model Context Protocol servers in GitHub Copilot Chat when pointing to local models.
+The server registers the following stdio tools to your agent context:
+
+| Tool Name | Parameters | Description | Returns |
+| :--- | :--- | :--- | :--- |
+| **`list_gates`** | None | Retrieves the checklist of all 5 due diligence pillars, weight proportions, and evaluation purposes from `manifest.json`. | JSON gate metadata |
+| **`get_gate_prompt`** | `gateId` *(number/string)*,<br>`company` *(string)* | Reads the gate template, prepends the global analysis guidelines from `00-core-principles.md`, and interpolates `{COMPANY}` tokens. | Normalized markdown prompt |
+| **`parse_gate_response`** | `gateId` *(number)*,<br>`responseText` *(string)* | Analyzes raw model output using the app's RegExp patterns to extract scores, result flags, key evidence, and references. | JSON metrics summary |
+| **`compile_final_report`** | `company` *(string)*,<br>`responses` *(object)*,<br>`ratings` *(object)*,<br>`keyReasons` *(object)* | Aggregates parsed results and syntheses across all five gates to build the final high-conviction dossier. | Synthesized markdown report |
+
+---
+
+## 📂 Prompt Asset Vault
+
+All prompt templates are located inside the local `prompts/` directory:
+*   **`00-core-principles.md`**: Standard guidelines on capital skepticism, source verification, and downside scenarios.
+*   **`gate-1-fundamental-quality-screen.md`**: 3-year revenue CAGR, net cash-to-debt, and FCF quality screens.
+*   **`gate-2-rule-of-40.md`**: Evaluates growth efficiency + FCF margins against direct peers.
+*   **`gate-3-moat-test.md`**: Chinese reverse-engineering moat durability stress test.
+*   **`gate-4-ceo-filter.md`**: Capital allocation history, related-party issues, and skin-in-the-game checks.
+*   **`gate-5-valuation.md`**: DCF scenario analysis and revenue-vs-margin sensitivity grids.
+*   **`final-report-compiler.md`**: Synthesis instructions for compiling final executive summaries, key risks, and portfolio fit recommendations.
+
+---
+
+## ⚙️ Setup & Installation
+
+1. Make sure you have **Node.js** (v18+) installed.
+2. Clone or navigate to the server folder and install dependencies:
+   ```bash
+   cd DueDILL_MCP
+   npm install
+   ```
+3. Verify that the server compiles and boots cleanly on standard I/O:
+   ```bash
+   node index.js
+   ```
+   *(Press `Ctrl+C` to close. Standard logs are piped to stderr so as not to corrupt standard JSON-RPC data packets)*.
+
+---
+
+## 💻 Connecting Local Agents in VS Code
+
+VS Code (v1.99+) natively supports Model Context Protocol servers in Copilot Chat when using local models.
 
 ### 1. Requirements
 *   **Ollama**: Installed and running locally.
-*   **Tool-Calling Model**: You **MUST** run a model that supports native function/tool calling, such as:
-    *   `qwen2.5-coder` (e.g. `qwen2.5-coder:14b` or `7b`)
-    *   `llama3.1` (8B+)
-    *   `mistral-nemo`
-    *   *Note*: Standard models without explicit tool-calling configurations cannot invoke MCP tools.
+*   **Tool-Calling Model**: You **MUST** select a local model that natively supports tool/function calling:
+    *   *Recommended*: `qwen2.5-coder` (e.g., `qwen2.5-coder:14b` or `7b`), `gemma4:12b` (or other sizes like `27b`), `llama3.1` (8B+), or `mistral-nemo`.
+    *   *Note*: Standard models without function-calling capabilities cannot trigger MCP actions.
 
-### 2. VS Code Configuration File (`mcp.json`)
-You can register this MCP server either globally or for this workspace only.
+### 2. Configure `mcp.json`
+You can configure the server at the workspace level or globally.
 
 #### Workspace-Level Configuration (Recommended)
-1. Inside your project folder, create a `.vscode` directory if it doesn't exist.
-2. Create a file named `mcp.json` (`.vscode/mcp.json`) and paste:
+Create a `.vscode/mcp.json` file in your project directory:
 
 ```json
 {
@@ -78,39 +93,77 @@ You can register this MCP server either globally or for this workspace only.
   }
 }
 ```
-*(Always use forward slashes `/` for Windows folder paths to avoid JSON syntax errors)*.
+*(Always use forward slashes `/` for Windows file paths in JSON).*
 
-#### Global User Configuration
-1. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
-2. Search for and select: **`MCP: Open User Configuration`**.
-3. Add the `duedill-mcp` configuration under the `servers` object.
-
-### 3. Verification
-1. Run the Command Palette command **`MCP: List Servers`** and confirm that `duedill-mcp` shows **Connected**.
-2. Open the **Output Panel**, select **MCP** from the dropdown list on the right, and verify that the tools are discovered correctly.
-3. If you edit prompt files or the index code, trigger **`MCP: Reset Cached Tools`** to force VS Code to reload tool schemas.
+#### Global Configuration
+1. Open the VS Code Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+2. Search and select: **`MCP: Open User Configuration`**.
+3. Add the `duedill-mcp` settings block to the list of servers.
 
 ---
 
-## Typical Agentic Workflow
+## 🤖 Typical Agentic Workflows
 
-When talking to your local agent in Copilot Chat (in **Agent** mode):
+We highlight two ways to operate this MCP server: the **Single-Prompt Autonomous Loop** (recommended) and the **Manual Step-by-Step Walkthrough**.
 
-1.  **Select Company**:
-    *   *Prompt*: `"I want to evaluate Palantir (PLTR). Start the DueDill analysis."`
-2.  **Fetch Gate Prompts**:
-    *   *Prompt*: `"Get the prompt for Gate 1."`
-    *   *Action*: The agent calls `get_gate_prompt(gateId: 1, company: "Palantir (PLTR)")` and gets the fully interpolated prompt.
-3.  **Perform Analysis**:
-    *   *Prompt*: `"Answer this prompt using your training data, search, or local workspace context. Ensure you include the exact output structure."`
-4.  **Parse Score & Reasons**:
-    *   *Prompt*: `"Parse the Gate 1 response we just got."`
-    *   *Action*: The agent calls `parse_gate_response` to verify that the rating and key evidence have been extracted correctly.
-5.  **Repeat for Gates 2–5**.
-6.  **Compile Executive Recommendation**:
-    *   *Prompt*: `"Get the final report compiler prompt."`
-    *   *Action*: Agent calls `get_gate_prompt(gateId: "final")` injecting the five gate summary inputs.
-    *   *Prompt*: `"Generate the final report synthesis chapters."`
-7.  **Generate Final Dossier**:
-    *   *Prompt*: `"Compile the complete due diligence report."`
-    *   *Action*: Agent calls `compile_final_report` mapping all summaries, ratings, and syntheses into a clean markdown dossier ready for Affine.
+### ⚡ The Single-Prompt Autonomous Loop (One Prompt)
+
+When in **Agent Mode** (e.g., Copilot Chat Agent, Cursor Composer, etc.), the entire multi-gate evaluation and compilation process can run autonomously from **exactly one user prompt**:
+
+#### **[USER PROMPT]**
+> `duedill <company_name>`
+
+#### **[AUTOMATED AGENT ACTIONS]** (Autonomous Execution Loop)
+
+```
+  [USER PROMPT]: "duedill AAPL"
+        │
+        ▼ (Autonomous agent execution starts)
+  1. [AUTOMATED TOOL CALL] ──> list_gates()
+        │                      Retrieves evaluation pillars, weights, and details
+        ▼
+  2. For Gate 1 to 5 (Sequentially):
+     ├──> [AUTOMATED TOOL CALL] ──> get_gate_prompt(gateId: i, company: "AAPL")
+     │                              Retrieves evaluation guidelines (including Core Principles)
+     ├──> [AUTOMATED SEARCH/WEB] ──> Agent performs web searches, reads documents, gathers financials
+     ├──> [AUTOMATED THOUGHT] ────> Agent conducts gate evaluation & drafts gate-level markdown output
+     └──> [AUTOMATED TOOL CALL] ──> parse_gate_response(gateId: i, responseText: "...")
+                                    Extracts metrics: rating (0-100), keyEvidence, finalReportInput
+        ▼
+  3. Executive Summary / Final Compilation:
+     ├──> [AUTOMATED TOOL CALL] ──> get_gate_prompt(gateId: "final", company: "AAPL")
+     ├──> [AUTOMATED THOUGHT] ────> Agent synthesizes final chapter utilizing all gate report inputs
+     └──> [AUTOMATED TOOL CALL] ──> compile_final_report(company: "AAPL", responses, ratings, keyReasons)
+                                    Aggregates and formats the final markdown dossier
+        ▼
+  [OUTPUT] ───────────────────────> Displays the final compiled Affine-ready markdown report to user
+```
+
+---
+
+### 📝 Manual Step-by-Step Walkthrough (User-Driven)
+
+If you prefer to control each phase manually or are in standard chat mode:
+
+*   **Step 1: Get Checklist**
+    *   **[USER PROMPT]**: `"Evaluate NVDA. Start the DueDill workflow."`
+    *   **[AUTOMATED TOOL CALL]**: Agent runs `list_gates` to map weights and goals.
+*   **Step 2: Gate-by-Gate Analysis**
+    *   **[USER PROMPT]**: `"Get the prompt for Gate 1"`
+    *   **[AUTOMATED TOOL CALL]**: Agent calls `get_gate_prompt(gateId: 1, company: "NVDA")`.
+    *   *Next, the agent conducts research using workspace files or search tools, and responds with the analysis.*
+    *   **[USER PROMPT]**: `"Parse the Gate 1 response"`
+    *   **[AUTOMATED TOOL CALL]**: Agent calls `parse_gate_response(gateId: 1, responseText: "...")`.
+    *   *(Repeat for Gates 2 through 5).*
+*   **Step 3: Executive Synthesis**
+    *   **[USER PROMPT]**: `"Draft the final executive summary"`
+    *   **[AUTOMATED TOOL CALL]**: Agent calls `get_gate_prompt(gateId: "final", company: "NVDA")` and synthesizes the core summary.
+*   **Step 4: Final Assembly**
+    *   **[USER PROMPT]**: `"Compile the final report"`
+    *   **[AUTOMATED TOOL CALL]**: Agent calls `compile_final_report(company: "NVDA", responses, ratings, keyReasons)` to generate the final Markdown document.
+
+---
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](LICENSE).
