@@ -51,8 +51,14 @@ VS Code discovers MCP servers via a configuration file (`mcp.json`). You can set
 3. Reload VS Code or execute the command **`MCP: Reset Cached Tools`** from the VS Code Command Palette (`Ctrl+Shift+P`).
 4. To check if the server is active, open the Command Palette and select **`MCP: List Servers`**. You should see `duedill-mcp` listed as **Connected**.
 
-### 🤖 Auto-Installation Prompt (Let an Agent do it)
-If you are chatting with an AI agent that has file-writing and command-execution capabilities in your current workspace (like Cursor Composer, GitHub Copilot Chat, or Antigravity), you can copy-paste this prompt to have the agent automatically fetch, build, and configure the MCP server:
+### 🤖 Workspace Agent Auto-Installation (With Warnings)
+
+> [!WARNING]
+> **VS Code Copilot Chat Sandboxing**: Standard VS Code Copilot Chat sessions (especially when configured with local Ollama models) are strictly sandboxed. They **cannot** execute background terminal commands (like `git clone` or `npm install`) or edit configuration files directly.
+> 
+> You should only use the agent prompt below if you are using a workspace editor agent with active filesystem and command-execution capabilities (such as Cursor Composer, Windsurf, or Antigravity) that requests your approval to run commands and write files.
+
+If you are using a capable workspace agent, you can copy-paste this prompt to guide it through the setup:
 
 > "Please install and configure the DueDill MCP server in my workspace: clone the repository `https://github.com/andrew72nd/DueDILL_MCP` into a `DueDILL_MCP` subdirectory, run `npm install` inside that folder to set up dependencies, create a `.vscode/mcp.json` file in my workspace root pointing to the absolute path of the cloned `index.js` (ensuring forward slashes are used for the Windows path), and verify the server boots successfully by running it briefly."
 
