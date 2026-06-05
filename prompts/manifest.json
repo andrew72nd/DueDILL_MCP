@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-06-04T22:07:19.336Z",
+  "coreFile": "00-core-principles.md",
+  "compilerFile": "final-report-compiler.md",
+  "compilerPrompt": {
+    "id": "final-report",
+    "title": "Final AI Report",
+    "shortTitle": "Final",
+    "file": "final-report-compiler.md",
+    "purpose": "Have an AI agent synthesize the five gate answers into the investment thesis, market misunderstanding, consolidated risks, portfolio fit notes, and final decision."
+  },
+  "gates": [
+    {
+      "id": 1,
+      "title": "Fundamental Quality Screen",
+      "shortTitle": "Quality",
+      "weight": 20,
+      "file": "gate-1-fundamental-quality-screen.md",
+      "purpose": "Confirm the company clears basic revenue, cash flow, and balance sheet requirements before deeper analysis.",
+      "questions": [
+        "Which fiscal year-end and reporting currency should be used?",
+        "Should acquisitions be adjusted out of revenue growth?",
+        "Should stock-based compensation be deducted from free cash flow quality?"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "The Rule of 40",
+      "shortTitle": "Rule 40",
+      "weight": 20,
+      "file": "gate-2-rule-of-40.md",
+      "purpose": "Confirm growth plus free cash flow clears the quality bar.",
+      "questions": [
+        "Should growth use trailing twelve months, latest fiscal year, or 3-year CAGR?",
+        "Which peer group is the fairest comparison?",
+        "Are there major acquisitions or divestitures that distort growth?"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "The Moat Test",
+      "shortTitle": "Moat",
+      "weight": 25,
+      "file": "gate-3-moat-test.md",
+      "purpose": "Decide whether growth is protected or easy to copy.",
+      "questions": [
+        "Which competitor set should be used for moat comparison?",
+        "Are margins structurally high or temporarily boosted by a cycle?",
+        "Which moat category is most likely to weaken first?"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "The CEO Filter",
+      "shortTitle": "CEO",
+      "weight": 15,
+      "file": "gate-4-ceo-filter.md",
+      "purpose": "Test whether leadership deserves long-term trust.",
+      "questions": [
+        "Should founder status be weighted more heavily than professional management quality?",
+        "What ownership threshold counts as meaningful skin in the game?",
+        "Which past promises should be used to measure delivery?"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Valuation",
+      "shortTitle": "Value",
+      "weight": 20,
+      "file": "gate-5-valuation.md",
+      "purpose": "Make sure the bear case is still attractive.",
+      "questions": [
+        "Which discount rate and terminal growth assumptions are acceptable?",
+        "Should stock-based compensation be treated as a real cost in valuation?",
+        "What minimum bear-case return is required before investing?"
+      ]
+    }
+  ]
+}

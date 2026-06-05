@@ -1,0 +1,356 @@
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Get local paths
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Point to the local self-contained prompts directory
+const PROMPTS_DIR = path.resolve(__dirname, "prompts");
+
+// Regex utility functions matching Next.js app
+function clampRating(value) {
+  const number = parseInt(String(value), 10);
+  if (isNaN(number)) return 0;
+  return Math.max(0, Math.min(100, number));
+}
+
+function extractPromptText(markdown) {
+  const match = markdown.match(/```(?:text)?\s*([\s\S]*?)```/i);
+  return (match ? match[1] : markdown).trim();
+}
+
+function parseRating(text) {
+  const patterns = [
+    /Rating\s*:\s*(\d{1,3})(?:\s*\/\s*100)?/i,
+    /Overall Rating\s*:\s*(\d{1,3})(?:\s*\/\s*100)?/i,
+    /(\d{1,3})\s*\/\s*100/
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return clampRating(match[1]);
+  }
+  return null;
+}
+
+function parseKeyReason(text) {
+  const keyEvidenceIndex = text.search(/Key\s+evidence\s*:/i);
+  if (keyEvidenceIndex === -1) return null;
+
+  const subText = text.slice(keyEvidenceIndex + 13);
+  const lines = subText.split("\n");
+  const bullets = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#") || (trimmed && !trimmed.startsWith("-") && !trimmed.startsWith("*") && !trimmed.startsWith("•") && bullets.length > 0)) {
+      break;
+    }
+    if (trimmed.startsWith("-") || trimmed.startsWith("*") || trimmed.startsWith("•")) {
+      const content = trimmed.replace(/^[-*•]\s*/, "").trim();
+      if (content && content !== "[insert key evidence]" && content !== "[insert]" && content !== "•" && content !== "-") {
+        bullets.push(content);
+      }
+    } else if (bullets.length > 0 && trimmed === "") {
+      continue;
+    } else if (bullets.length > 0) {
+      break;
+    }
+  }
+
+  if (bullets.length > 0) {
+    return bullets.join("; ");
+  }
+  return null;
+}
+
+function extractFinalReportInput(response, gateId) {
+  const match = response.match(/(?:^|\n)##\s*Final Report Input\s*\n([\s\S]*?)(?=\n##\s+|$)/i);
+  if (!match) return "";
+  return `## Pillar ${gateId} Final Report Input\n${match[1].trim()}`;
+}
+
+function extractReferences(response, gateId) {
+  const match = response.match(/(?:^|\n)##\s*References\s*\n([\s\S]*?)(?=\n##\s+|$)/i);
+  if (!match) return "";
+  const refs = match[1].trim();
+  if (!refs || refs === "-" || refs === "- " || refs.match(/^-?\s*$/)) return "";
+  return `### Pillar ${gateId} References\n${refs}`;
+}
+
+function replacePromptTokens(template, company) {
+  const value = company.trim() || "[INSERT COMPANY NAME / TICKER HERE]";
+  return template
+    .replaceAll("{COMPANY_TICKER}", value)
+    .replaceAll("{COMPANY}", value)
+    .replaceAll("{DATE}", new Date().toISOString().slice(0, 10));
+}
+
+function normalizeGatePrompt(rawGatePrompt, corePrompt) {
+  const prompt = extractPromptText(rawGatePrompt);
+  return prompt
+    .replace("[Use the Core Principles for Every Gate]", corePrompt.trim())
+    .replace("[Core Principles above]", corePrompt.trim())
+    .replace("[Core Principles]", corePrompt.trim());
+}
+
+// Initialize the MCP Server
+const server = new Server(
+  {
+    name: "duedill-mcp",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Register Available Tools
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "list_gates",
+        description: "Returns the checklist of due diligence pillars/gates, weights, and purposes from manifest.json.",
+        inputSchema: { type: "object", properties: {} }
+      },
+      {
+        name: "get_gate_prompt",
+        description: "Fetches and normalizes a specific gate/pillar prompt from the file system, interpolating company tokens.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            gateId: { type: "number", description: "The ID of the gate (1 to 5) or 'final' for the compiler prompt." },
+            company: { type: "string", description: "The name of the company/ticker to interpolate into the prompt." }
+          },
+          required: ["gateId", "company"]
+        }
+      },
+      {
+        name: "parse_gate_response",
+        description: "Parses LLM analysis text to extract the score rating, key evidence reasons, final report inputs, and references using RegExp checks.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            gateId: { type: "number", description: "The ID of the gate (1 to 5) being parsed." },
+            responseText: { type: "string", description: "The raw Markdown output generated by the LLM." }
+          },
+          required: ["gateId", "responseText"]
+        }
+      },
+      {
+        name: "compile_final_report",
+        description: "Aggregates parsed gate metrics and summaries to generate a complete, cohesive Markdown Due Diligence report ready for Affine import.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            company: { type: "string", description: "Company name/ticker." },
+            responses: {
+              type: "object",
+              description: "A dictionary mapping gate IDs (1-5, and 6 for final report) to their raw responses."
+            },
+            ratings: {
+              type: "object",
+              description: "A dictionary mapping gate IDs (1-5) to their parsed number scores (0-100)."
+            },
+            keyReasons: {
+              type: "object",
+              description: "A dictionary mapping gate IDs (1-5) to their parsed key reason string summaries."
+            }
+          },
+          required: ["company", "responses", "ratings"]
+        }
+      }
+    ]
+  };
+});
+
+// Tool execution logic handler
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    // Read manifest.json dynamically
+    const manifestPath = path.join(PROMPTS_DIR, "manifest.json");
+    if (!fs.existsSync(manifestPath)) {
+      throw new Error(`Manifest not found at: ${manifestPath}`);
+    }
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+
+    switch (name) {
+      case "list_gates": {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ gates: manifest.gates, compilerPrompt: manifest.compilerPrompt }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "get_gate_prompt": {
+        const { gateId, company } = args;
+
+        // Load core principles
+        const corePath = path.join(PROMPTS_DIR, manifest.coreFile);
+        const corePrompt = fs.readFileSync(corePath, "utf-8");
+
+        if (gateId === "final" || gateId === 6) {
+          const compilerPath = path.join(PROMPTS_DIR, manifest.compilerFile);
+          let rawCompiler = fs.readFileSync(compilerPath, "utf-8");
+          let prompt = extractPromptText(rawCompiler);
+          return {
+            content: [{ type: "text", text: replacePromptTokens(prompt, company) }]
+          };
+        }
+
+        const gate = manifest.gates.find(g => g.id === Number(gateId));
+        if (!gate) {
+          throw new Error(`Invalid Gate ID: ${gateId}. Must be between 1 and 5.`);
+        }
+
+        const gatePath = path.join(PROMPTS_DIR, gate.file);
+        const rawGate = fs.readFileSync(gatePath, "utf-8");
+
+        const normalized = normalizeGatePrompt(rawGate, corePrompt);
+        const interpolated = replacePromptTokens(normalized, company);
+
+        return {
+          content: [{ type: "text", text: interpolated }]
+        };
+      }
+
+      case "parse_gate_response": {
+        const { gateId, responseText } = args;
+        const rating = parseRating(responseText);
+        const keyReason = parseKeyReason(responseText);
+        const finalReportInput = extractFinalReportInput(responseText, gateId);
+        const references = extractReferences(responseText, gateId);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                gateId,
+                rating: rating ?? "Not Found",
+                result: rating === null ? "Incomplete" : rating >= 70 ? "PASS" : "FAIL",
+                keyReason: keyReason ?? "Not Found",
+                finalReportInput,
+                references
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "compile_final_report": {
+        const { company, responses, ratings, keyReasons = {} } = args;
+
+        let weighted = 0;
+        let weightTotal = 0;
+        let completed = 0;
+
+        manifest.gates.forEach((gate) => {
+          const rating = ratings[gate.id];
+          if (rating !== undefined && rating !== null) {
+            weighted += Number(rating) * gate.weight;
+            weightTotal += gate.weight;
+            completed += 1;
+          }
+        });
+
+        const score = weightTotal ? Math.round(weighted / weightTotal) : 0;
+        
+        let decision = "Incomplete";
+        if (completed >= 5) {
+          if (score > 85) decision = "High Conviction";
+          else if (score >= 70) decision = "Monitor / Smaller Position";
+          else decision = "Reject";
+        }
+
+        // Build grid table rows
+        const rows = manifest.gates
+          .map((gate) => {
+            const rating = ratings[gate.id];
+            const result = rating === undefined ? "Incomplete" : rating >= 70 ? "PASS" : "FAIL";
+            const keyReason = keyReasons[gate.id] || "See responses";
+            return `| Pillar ${gate.id}: ${gate.title} | ${gate.weight}% | ${rating ?? "--"} | ${result} | ${keyReason} |`;
+          })
+          .join("\n");
+
+        // Build detailed sections
+        const gateSections = manifest.gates
+          .map((gate) => {
+            const rating = ratings[gate.id] ?? "--";
+            const resultLabel = ratings[gate.id] !== undefined ? (ratings[gate.id] >= 70 ? "— PASS" : "— FAIL") : "";
+            return `## Pillar ${gate.id}: ${gate.title}\n\n> Rating: **${rating}/100** ${resultLabel}\n\n${responses[gate.id] || "_No response pasted yet._"}`;
+          })
+          .join("\n\n---\n\n");
+
+        // References
+        const refSections = manifest.gates
+          .map(gate => extractReferences(responses[gate.id] ?? "", gate.id))
+          .filter(Boolean);
+        const references = refSections.length > 0
+          ? `## Consolidated References\n\n${refSections.join("\n\n")}`
+          : "";
+
+        const aiCompiledReport = responses[6] || responses["final"] || "";
+
+        const report = `# Due Diligence Report: ${company}
+ 
+> **Date:** ${new Date().toISOString().slice(0, 10)} · **Overall Rating:** ${score}/100 · **Pillars Completed:** ${completed}/5 · **Recommendation:** ${decision}
+ 
+---
+ 
+## Pillar Summaries
+ 
+| Pillar | Weight | Rating | Result | Key Reason |
+|---|---:|---:|---|---|
+${rows}
+ 
+---
+ 
+${aiCompiledReport || "*(Executive synthesis report not compiled yet)*"}
+ 
+---
+ 
+## Detailed Pillar Analysis
+ 
+${gateSections}
+${references ? `\n---\n\n${references}` : ""}
+`;
+
+        return {
+          content: [{ type: "text", text: report }]
+        };
+      }
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    return {
+      isError: true,
+      content: [{ type: "text", text: error.message }]
+    };
+  }
+});
+
+// Start Server stdio transport
+async function run() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("DueDill MCP Server running on stdio transport");
+}
+
+run();

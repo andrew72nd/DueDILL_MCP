@@ -1,0 +1,26 @@
+{
+  "name": "duedill-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) Server for the DueDill Valuation & Due Diligence Tool",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "due-diligence",
+    "valuation",
+    "ollama",
+    "copilot-chat"
+  ],
+  "author": "",
+  "license": "ISC"
+}
