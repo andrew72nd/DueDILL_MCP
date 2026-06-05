@@ -101,8 +101,8 @@ Create a `.vscode/mcp.json` file in your project directory:
 3. Add the `duedill-mcp` settings block to the list of servers.
 
 #### 🤖 Auto-Installation via AI Agent
-If you are currently chatting with an AI agent in this workspace (like Cursor Composer or Copilot Agent), you can simply copy-paste this prompt to have the agent set up the MCP server for you:
-> "Please self-install and configure this workspace's MCP server: locate the absolute path to `index.js` in this directory, create the `.vscode/mcp.json` file pointing to it (ensuring forward slashes are used for the Windows path), run `npm install` in this directory to load dependencies, and run a quick verification start to verify the server boots successfully."
+If you are currently chatting with an AI agent in your workspace (like Cursor Composer or Copilot Agent), you can copy-paste this prompt to have the agent automatically fetch, build, and configure the MCP server:
+> "Please install and configure the DueDill MCP server in my workspace: clone the repository `https://github.com/andrew72nd/DueDILL_MCP` into a `DueDILL_MCP` subdirectory, run `npm install` inside that folder to set up dependencies, create a `.vscode/mcp.json` file in my workspace root pointing to the absolute path of the cloned `index.js` (ensuring forward slashes are used for the Windows path), and verify the server boots successfully by running it briefly."
 
 ---
 
